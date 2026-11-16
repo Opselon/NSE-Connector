@@ -1,0 +1,34 @@
+[workspace]
+resolver = "2"
+members = ["crates/connector-core"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+
+[workspace.dependencies]
+# Runtime
+tokio = { version = "1", features = ["full"] }
+futures-util = "0.3"
+# HTTP / WS clients
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+tokio-tungstenite = { version = "0.30", features = ["rustls-tls-webpki-roots"] }
+http = "1"
+# Data
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+time = { version = "0.3", features = ["formatting", "parsing", "serde", "macros"] }
+uuid = { version = "1", features = ["v7"] }
+# Errors + observability
+thiserror = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+# Windows credential storage
+keyring = { version = "4", features = ["windows-native-keyring-store"] }
+# Test harness only
+axum = { version = "0.8", features = ["ws"] }
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+strip = true
