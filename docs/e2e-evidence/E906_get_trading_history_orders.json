@@ -1,0 +1,21 @@
+{
+ "evidence_id": "E906",
+ "checklist_items": [
+  61
+ ],
+ "action": "get_trading_history_orders",
+ "input": {
+  "datetime_from": "2026-11-17T21:53:00",
+  "datetime_to": "2026-11-16T21:53:00"
+ },
+ "latency_ms": 3,
+ "classification": "tool_error",
+ "raw_output": {
+  "tool_error": "Tool 'get_trading_history_orders' invalid datetime range"
+ },
+ "expected": "error: datetime_to must be greater than datetime_from",
+ "verdict": "pass",
+ "broker": "MetaQuotes-Demo",
+ "retry_safe": false,
+ "notes": ""
+}

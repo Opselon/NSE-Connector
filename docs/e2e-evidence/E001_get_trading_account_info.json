@@ -1,0 +1,99 @@
+{
+ "evidence_id": "E001",
+ "checklist_items": [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11
+ ],
+ "action": "get_trading_account_info",
+ "input": {},
+ "latency_ms": 2,
+ "classification": "ok",
+ "raw_output": {
+  "account": {
+   "server": "MetaQuotes-Demo",
+   "broker": "MetaQuotes Ltd.",
+   "login": "<LOGIN>",
+   "type": "demo",
+   "read_only": false,
+   "margin_mode": "hedging",
+   "balance": 26237.73,
+   "credit": 0.0,
+   "margin": 32.99,
+   "margin_free": 26205.13,
+   "profit": 0.39,
+   "equity": 26238.12,
+   "swaps": 0.0,
+   "commissions": 0.0,
+   "currency": "USD"
+  },
+  "terminal": {
+   "timestamp": "2026-11-16T21:53:00Z",
+   "connection": {
+    "state": "synchronized",
+    "server": "MetaQuotes-Demo",
+    "last_authorized_at": "2026-11-16T21:50:55Z",
+    "last_connection_lost_at": "2026-11-16T21:50:55Z",
+    "ping_microseconds": 119448
+   },
+   "network": {
+    "bytes_sent": 49180,
+    "bytes_received": 153311044
+   },
+   "build": 6306,
+   "experts_dll_allowed": true,
+   "experts_trade_allowed": true,
+   "mcp_trade_allowed": true,
+   "chart_max_bars": 100000,
+   "language_code_page": 0,
+   "mql5_community_connected": false,
+   "mql5_community_account_exist": false,
+   "company": "MetaQuotes Ltd.",
+   "program_name": "MetaTrader 5",
+   "cpu_name": "12th Gen Intel Core i3-12100",
+   "os_version": "Windows 12 build 28000",
+   "language": "English",
+   "email_enabled": false,
+   "notifications_enabled": false,
+   "mqid_available": true,
+   "cpu_cores": 8,
+   "x64": true,
+   "cpu_architecture": "AVX2 + FMA3",
+   "terminal_path": "<PATH>",
+   "data_path": "<PATH>",
+   "common_data_path": "<PATH>",
+   "system_physical_total_mb": 16125,
+   "system_physical_available_mb": 5365,
+   "process_working_set_mb": 128,
+   "process_private_bytes_mb": 317,
+   "disk_free_mb": 246785,
+   "screen": {
+    "dpi": 96,
+    "left": 0,
+    "top": 0,
+    "width": 2560,
+    "height": 1440
+   },
+   "window": {
+    "left": 0,
+    "top": 0,
+    "right": 2560,
+    "bottom": 1354
+   },
+   "retransmit_percent": 4.56
+  }
+ },
+ "expected": "fields: balance/equity/margin*/currency/type; leverage presence check",
+ "verdict": "pass (behavior recorded)",
+ "broker": "MetaQuotes-Demo",
+ "retry_safe": true,
+ "notes": ""
+}

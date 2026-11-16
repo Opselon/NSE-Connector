@@ -1,0 +1,22 @@
+{
+ "evidence_id": "E004",
+ "checklist_items": [
+  63,
+  68
+ ],
+ "action": "get_trading_history_positions",
+ "input": {
+  "datetime_from": "2026-11-09T21:53:00",
+  "datetime_to": "2026-11-17T21:53:00"
+ },
+ "latency_ms": 1,
+ "classification": "ok",
+ "raw_output": {
+  "positions": []
+ },
+ "expected": "aggregated closed positions (may be empty on fresh demo)",
+ "verdict": "pass (behavior recorded)",
+ "broker": "MetaQuotes-Demo",
+ "retry_safe": true,
+ "notes": ""
+}

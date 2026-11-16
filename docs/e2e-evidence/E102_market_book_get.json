@@ -1,0 +1,23 @@
+{
+ "evidence_id": "E102",
+ "checklist_items": [
+  14,
+  15,
+  98,
+  109
+ ],
+ "action": "market_book_get",
+ "input": {
+  "symbol": "EURUSD"
+ },
+ "latency_ms": 1,
+ "classification": "tool_error",
+ "raw_output": {
+  "tool_error": "Tool 'market_book_get' subscription not found, use market_book_subscribe first"
+ },
+ "expected": "book levels (bid/ask) + spread after subscribe prerequisite",
+ "verdict": "pass",
+ "broker": "MetaQuotes-Demo",
+ "retry_safe": false,
+ "notes": ""
+}

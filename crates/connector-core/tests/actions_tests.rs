@@ -590,6 +590,37 @@ async fn kill_switch_blocks_new_commands_in_scope() {
 }
 
 #[tokio::test]
+async fn text_only_success_responses_are_recorded_not_misclassified() {
+    // LIVE-VERIFIED (E100): add_marketwatch_symbol answers plain text with
+    // isError=false. The dispatcher must record it as an executed text
+    // result, never as a failure.
+    let mock = MockMcp::spawn().await;
+    mock.set_tools(extended_tools()).await;
+    mock.set_tool_behavior(
+        "write_file",
+        ToolBehavior::TextPlain("file written successfully"),
+    )
+    .await;
+    let mut client = connected_client(&mock).await;
+    let manifest = discover(&mock, &mut client).await;
+    let dispatcher = dispatcher_with(manifest);
+
+    let outcome = dispatcher
+        .dispatch(
+            &mut client,
+            &request("write_file", json!({ "path": "test.txt" }), "tx1"),
+            &full_ctx(),
+        )
+        .await
+        .expect("text success must be Executed");
+    assert_eq!(outcome.status, ActionStatus::Executed);
+    let payload = outcome.actual_mcp_result.expect("payload");
+    assert_eq!(payload["kind"], json!("text"));
+    assert_eq!(payload["text"], json!("file written successfully"));
+    mock.stop().await;
+}
+
+#[tokio::test]
 async fn manifest_refresh_changes_dispatch_behavior() {
     let mock = MockMcp::spawn().await;
     let mut client = connected_client(&mock).await;

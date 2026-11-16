@@ -1,0 +1,23 @@
+{
+ "evidence_id": "E905",
+ "checklist_items": [
+  116
+ ],
+ "action": "get_chart_history",
+ "input": {
+  "symbol": "EURUSD",
+  "period": "BAD_PERIOD",
+  "datetime_from": "2026-11-16T20:53:00",
+  "datetime_to": "2026-11-16T21:53:00"
+ },
+ "latency_ms": 1,
+ "classification": "tool_error",
+ "raw_output": {
+  "tool_error": "Tool 'get_chart_history' correct period must be specified"
+ },
+ "expected": "error: unsupported period",
+ "verdict": "pass",
+ "broker": "MetaQuotes-Demo",
+ "retry_safe": false,
+ "notes": ""
+}

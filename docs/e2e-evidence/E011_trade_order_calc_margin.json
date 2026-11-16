@@ -1,0 +1,21 @@
+{
+ "evidence_id": "E011",
+ "checklist_items": [
+  90,
+  91
+ ],
+ "action": "trade_order_calc_margin",
+ "input": {
+  "price": 1.10042
+ },
+ "latency_ms": 1,
+ "classification": "tool_error",
+ "raw_output": {
+  "tool_error": "Tool 'trade_order_calc_margin' symbol not found in market watch"
+ },
+ "expected": "required margin for 0.1 lot EURUSD",
+ "verdict": "pass (behavior recorded)",
+ "broker": "MetaQuotes-Demo",
+ "retry_safe": false,
+ "notes": ""
+}

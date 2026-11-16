@@ -1,0 +1,26 @@
+{
+ "evidence_id": "E103",
+ "checklist_items": [
+  90,
+  91
+ ],
+ "action": "trade_order_calc_margin",
+ "input": {
+  "symbol": "EURUSD",
+  "type": "buy",
+  "volume": 0.1,
+  "price": 1.10032
+ },
+ "latency_ms": 1,
+ "classification": "ok",
+ "raw_output": {
+  "ok": true,
+  "margin": 110.03,
+  "currency": "USD"
+ },
+ "expected": "required margin for 0.1 lot EURUSD at live price",
+ "verdict": "pass",
+ "broker": "MetaQuotes-Demo",
+ "retry_safe": true,
+ "notes": ""
+}

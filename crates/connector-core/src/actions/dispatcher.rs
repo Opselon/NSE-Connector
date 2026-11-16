@@ -25,7 +25,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Value, json};
 use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
 
@@ -33,7 +33,7 @@ use crate::actions::kill::{KillScope, KillSwitch};
 use crate::actions::manifest::ActionManifest;
 use crate::actions::risk::RiskTier;
 use crate::actions::schema::validate_against_schema;
-use crate::mcp::{McpError, McpHttpClient, extract_tool_json};
+use crate::mcp::{McpError, McpHttpClient, ToolOutcome, extract_tool_result};
 use crate::security::redact::mask_login;
 
 /// Server-to-connector action request (spec §6.2).
@@ -409,10 +409,21 @@ impl ActionDispatcher {
         );
         let envelope = mcp.call_tool_raw(&req.action_name, &req.parameters).await;
         match envelope {
-            Ok(env) => match extract_tool_json(&env) {
-                Ok(payload) => Ok(finish(
+            Ok(env) => match extract_tool_result(&env) {
+                // JSON payloads pass through verbatim (raw MT5 data).
+                Ok(ToolOutcome::Json(payload)) => Ok(finish(
                     ActionStatus::Executed,
                     Some(payload),
+                    Vec::new(),
+                    None,
+                    &req,
+                )),
+                // LIVE-VERIFIED: mutation tools (add_marketwatch_symbol,
+                // ...) answer with plain text. Record the kind explicitly so
+                // the Platform can distinguish response shapes.
+                Ok(ToolOutcome::Text(text)) => Ok(finish(
+                    ActionStatus::Executed,
+                    Some(json!({ "kind": "text", "text": text })),
                     Vec::new(),
                     None,
                     &req,

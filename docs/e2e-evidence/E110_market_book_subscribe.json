@@ -1,0 +1,21 @@
+{
+ "evidence_id": "E110",
+ "checklist_items": [
+  98
+ ],
+ "action": "market_book_subscribe",
+ "input": {
+  "symbol": "EURUSD"
+ },
+ "latency_ms": 1,
+ "classification": "ok",
+ "raw_output": {
+  "ok": true,
+  "symbol": "EURUSD"
+ },
+ "expected": "book subscription established",
+ "verdict": "pass",
+ "broker": "MetaQuotes-Demo",
+ "retry_safe": true,
+ "notes": ""
+}

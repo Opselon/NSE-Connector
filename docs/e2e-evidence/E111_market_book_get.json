@@ -1,0 +1,31 @@
+{
+ "evidence_id": "E111",
+ "checklist_items": [
+  14,
+  15,
+  99,
+  109
+ ],
+ "action": "market_book_get",
+ "input": {
+  "symbol": "EURUSD"
+ },
+ "latency_ms": 1,
+ "classification": "ok",
+ "raw_output": {
+  "ok": true,
+  "symbol": "EURUSD",
+  "symbol_id": 4252,
+  "symbol_digits": 5,
+  "symbol_book_depth": 32,
+  "symbol_point": 1e-05,
+  "symbol_allow_negative_prices": false,
+  "total_levels": 0,
+  "levels": []
+ },
+ "expected": "live book levels: bid/ask + depth",
+ "verdict": "pass",
+ "broker": "MetaQuotes-Demo",
+ "retry_safe": true,
+ "notes": ""
+}

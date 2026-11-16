@@ -1,0 +1,18 @@
+{
+ "evidence_id": "E907",
+ "checklist_items": [
+  129
+ ],
+ "action": "market_book_get",
+ "input": {},
+ "latency_ms": 3,
+ "classification": "tool_error",
+ "raw_output": {
+  "tool_error": "Tool 'market_book_get' symbol must be specified"
+ },
+ "expected": "error: required parameter 'symbol' missing",
+ "verdict": "pass",
+ "broker": "MetaQuotes-Demo",
+ "retry_safe": false,
+ "notes": ""
+}

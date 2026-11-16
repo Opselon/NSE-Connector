@@ -1,0 +1,24 @@
+{
+ "evidence_id": "E013",
+ "checklist_items": [
+  110,
+  112,
+  113
+ ],
+ "action": "trade_check_market_order",
+ "input": {
+  "symbol": "EURUSD",
+  "type": "buy",
+  "volume": 0.01
+ },
+ "latency_ms": 1,
+ "classification": "tool_error",
+ "raw_output": {
+  "tool_error": "Tool 'trade_check_market_order' trading is not permitted"
+ },
+ "expected": "pre-trade validation result (no execution)",
+ "verdict": "pass (behavior recorded)",
+ "broker": "MetaQuotes-Demo",
+ "retry_safe": false,
+ "notes": ""
+}

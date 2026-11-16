@@ -1,0 +1,131 @@
+{
+ "evidence_id": "E003",
+ "checklist_items": [
+  20,
+  22,
+  25,
+  61,
+  62,
+  64,
+  70,
+  71,
+  72
+ ],
+ "action": "get_trading_history_orders",
+ "input": {
+  "datetime_from": "2026-11-09T21:53:00",
+  "datetime_to": "2026-11-17T21:53:00",
+  "include_orders": true,
+  "include_orders_canceled": true,
+  "include_deals": true
+ },
+ "latency_ms": 1,
+ "classification": "ok",
+ "raw_output": {
+  "orders": [
+   {
+    "order_id": "15********47",
+    "order_external_id": "",
+    "position_id": "15********47",
+    "symbol": "EURUSD",
+    "type": "buy",
+    "filling": "fill or kill",
+    "open_time": "2026-11-16T22:33:39",
+    "done_time": "2026-11-16T22:33:39",
+    "open_reason": "Client",
+    "state": "filled",
+    "volume_initial": 0.01,
+    "volume_current": 0,
+    "contract_size": 100000.0,
+    "comment": ""
+   },
+   {
+    "order_id": "15********47",
+    "order_external_id": "",
+    "position_id": "15********47",
+    "symbol": "EURUSD",
+    "type": "buy",
+    "filling": "fill or kill",
+    "open_time": "2026-11-16T23:04:02",
+    "done_time": "2026-11-16T23:04:02",
+    "open_reason": "Client",
+    "state": "filled",
+    "volume_initial": 0.01,
+    "volume_current": 0,
+    "contract_size": 100000.0,
+    "comment": ""
+   },
+   {
+    "order_id": "15********94",
+    "order_external_id": "",
+    "position_id": "15********94",
+    "symbol": "EURUSD",
+    "type": "buy",
+    "filling": "fill or kill",
+    "open_time": "2026-11-16T23:04:07",
+    "done_time": "2026-11-16T23:04:07",
+    "open_reason": "Client",
+    "state": "filled",
+    "volume_initial": 0.01,
+    "volume_current": 0,
+    "contract_size": 100000.0,
+    "comment": ""
+   }
+  ],
+  "deals": [
+   {
+    "deal_id": "15********27",
+    "deal_external_id": "",
+    "order_id": "15********47",
+    "position_id": "15********47",
+    "symbol": "EURUSD",
+    "action": "buy",
+    "entry": "in",
+    "reason": "Client",
+    "open_time": "2026-11-16T22:33:39",
+    "price_open": 1.09995,
+    "volume": 0.01,
+    "profit": 0.0,
+    "contract_size": 100000.0,
+    "comment": ""
+   },
+   {
+    "deal_id": "15********70",
+    "deal_external_id": "",
+    "order_id": "15********47",
+    "position_id": "15********47",
+    "symbol": "EURUSD",
+    "action": "buy",
+    "entry": "in",
+    "reason": "Client",
+    "open_time": "2026-11-16T23:04:02",
+    "price_open": 1.09953,
+    "volume": 0.01,
+    "profit": 0.0,
+    "contract_size": 100000.0,
+    "comment": ""
+   },
+   {
+    "deal_id": "15********01",
+    "deal_external_id": "",
+    "order_id": "15********94",
+    "position_id": "15********94",
+    "symbol": "EURUSD",
+    "action": "buy",
+    "entry": "in",
+    "reason": "Client",
+    "open_time": "2026-11-16T23:04:07",
+    "price_open": 1.09953,
+    "volume": 0.01,
+    "profit": 0.0,
+    "contract_size": 100000.0,
+    "comment": ""
+   }
+  ]
+ },
+ "expected": "orders[] + deals[] with order_id/deal_id/entry/state/open_time/price_open",
+ "verdict": "pass (behavior recorded)",
+ "broker": "MetaQuotes-Demo",
+ "retry_safe": true,
+ "notes": ""
+}

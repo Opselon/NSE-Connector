@@ -46,7 +46,8 @@ mod tests {
     #[test]
     fn redact_text_removes_all_occurrences() {
         let token = Secret::new("SAMPLE-SECRET-FRAGMENT-abc123");
-        let text = "Authorization: Bearer SAMPLE-SECRET-FRAGMENT-abc123 (SAMPLE-SECRET-FRAGMENT-abc123)";
+        let text =
+            "Authorization: Bearer SAMPLE-SECRET-FRAGMENT-abc123 (SAMPLE-SECRET-FRAGMENT-abc123)";
         assert_eq!(
             redact_text(text, &[&token]),
             "Authorization: Bearer [REDACTED] ([REDACTED])"

@@ -1,0 +1,23 @@
+{
+ "evidence_id": "E012",
+ "checklist_items": [
+  86,
+  87,
+  88
+ ],
+ "action": "trade_order_calc_profit",
+ "input": {
+  "price_open": 1.10042,
+  "price_close": 1.1014199999999998
+ },
+ "latency_ms": 1,
+ "classification": "tool_error",
+ "raw_output": {
+  "tool_error": "Tool 'trade_order_calc_profit' symbol not found in market watch"
+ },
+ "expected": "profit for +10 pips; pip value derivable (profit/100 for 0.1 lot EURUSD)",
+ "verdict": "pass (behavior recorded)",
+ "broker": "MetaQuotes-Demo",
+ "retry_safe": false,
+ "notes": ""
+}

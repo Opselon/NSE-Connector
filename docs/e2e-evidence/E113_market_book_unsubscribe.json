@@ -1,0 +1,20 @@
+{
+ "evidence_id": "E113",
+ "checklist_items": [
+  98
+ ],
+ "action": "market_book_unsubscribe",
+ "input": {
+  "symbol": "EURUSD"
+ },
+ "latency_ms": 1,
+ "classification": "tool_error",
+ "raw_output": {
+  "tool_error": "Tool 'market_book_unsubscribe' subscription not found"
+ },
+ "expected": "unsubscribe when not subscribed (idempotency)",
+ "verdict": "pass",
+ "broker": "MetaQuotes-Demo",
+ "retry_safe": false,
+ "notes": ""
+}

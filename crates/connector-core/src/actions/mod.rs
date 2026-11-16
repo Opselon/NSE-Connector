@@ -11,8 +11,8 @@ pub mod schema;
 pub mod symbols;
 
 pub use contract::{
-    DataQuality, MessageContext, MessageEnvelope, SyncMetadata, PROTOCOL_VERSION,
-    SCHEMA_VERSION, TRANSFORMATION_VERSION,
+    DataQuality, MessageContext, MessageEnvelope, PROTOCOL_VERSION, SCHEMA_VERSION, SyncMetadata,
+    TRANSFORMATION_VERSION,
 };
 pub use dispatcher::{
     ActionDispatcher, ActionRequest, ActionStatus, DispatchContext, DispatchOutcome,

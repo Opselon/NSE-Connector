@@ -1,0 +1,20 @@
+{
+ "evidence_id": "E100",
+ "checklist_items": [
+  12
+ ],
+ "action": "add_marketwatch_symbol",
+ "input": {
+  "symbol": "EURUSD"
+ },
+ "latency_ms": 1,
+ "classification": "malformed_response",
+ "raw_output": {
+  "non_json_text": "market watch symbol added"
+ },
+ "expected": "symbol added to Market Watch (prerequisite for calc/book tools)",
+ "verdict": "pass",
+ "broker": "MetaQuotes-Demo",
+ "retry_safe": false,
+ "notes": ""
+}

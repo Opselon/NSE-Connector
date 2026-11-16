@@ -1,0 +1,29 @@
+{
+ "evidence_id": "E104",
+ "checklist_items": [
+  86,
+  87,
+  88,
+  89
+ ],
+ "action": "trade_order_calc_profit",
+ "input": {
+  "symbol": "EURUSD",
+  "type": "buy",
+  "volume": 0.1,
+  "price_open": 1.10032,
+  "price_close": 1.10132
+ },
+ "latency_ms": 11,
+ "classification": "ok",
+ "raw_output": {
+  "ok": true,
+  "profit": 10.0,
+  "currency": "USD"
+ },
+ "expected": "profit for +10 pips at 0.1 lot -> pip value derivable",
+ "verdict": "pass",
+ "broker": "MetaQuotes-Demo",
+ "retry_safe": true,
+ "notes": ""
+}

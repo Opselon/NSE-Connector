@@ -1,0 +1,21 @@
+{
+ "evidence_id": "E908",
+ "checklist_items": [
+  132
+ ],
+ "action": "totally_unknown_tool",
+ "input": {},
+ "latency_ms": 2,
+ "classification": "jsonrpc_error",
+ "raw_output": {
+  "jsonrpc_error": {
+   "code": -32602,
+   "message": "tool not found"
+  }
+ },
+ "expected": "JSON-RPC -32602 tool not found (HTTP 200)",
+ "verdict": "pass",
+ "broker": "MetaQuotes-Demo",
+ "retry_safe": true,
+ "notes": ""
+}

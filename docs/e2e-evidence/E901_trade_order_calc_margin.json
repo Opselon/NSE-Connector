@@ -1,0 +1,23 @@
+{
+ "evidence_id": "E901",
+ "checklist_items": [
+  119
+ ],
+ "action": "trade_order_calc_margin",
+ "input": {
+  "symbol": "INVALID_SYM_XY",
+  "type": "buy",
+  "volume": 0.1,
+  "price": 1.0
+ },
+ "latency_ms": 1,
+ "classification": "tool_error",
+ "raw_output": {
+  "tool_error": "Tool 'trade_order_calc_margin' symbol not found in market watch"
+ },
+ "expected": "error: invalid/unavailable symbol",
+ "verdict": "pass",
+ "broker": "MetaQuotes-Demo",
+ "retry_safe": false,
+ "notes": ""
+}

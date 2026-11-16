@@ -11,10 +11,12 @@ use serde::{Deserialize, Serialize};
 use crate::actions::risk::{ActionCategory, Classification, RiskTier, classify};
 use crate::mcp::{McpError, McpHttpClient};
 
-/// The action count reported by the supplied MCP environment. Per spec §3.2,
-/// more actions than expected are registered; fewer are reported as missing
-/// — never silently marked as supported.
-pub const EXPECTED_ACTION_COUNT: usize = 106;
+/// The action count stated by the engineering directive (136). The LIVE
+/// server reported 107 actions (verified 2026-11-16/17) — the gap is
+/// documented in docs/GAP_ANALYSIS.md; the directive's checklist is a
+/// capability list, not the manifest. Per spec §3.2, fewer-than-expected is
+/// reported, never silently accepted.
+pub const EXPECTED_ACTION_COUNT: usize = 136;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ActionDescriptor {

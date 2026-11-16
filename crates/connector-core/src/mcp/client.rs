@@ -382,13 +382,19 @@ impl McpHttpClient {
     }
 }
 
-/// Extracts the tool payload from the JSON-RPC result envelope.
-///
-/// The MT5 MCP server returns the payload as a JSON string inside
-/// `result.content[0].text` with `result.isError: false`. This function
-/// verifies `isError`, picks the first text content, and parses the embedded
-/// JSON.
-pub fn extract_tool_json(envelope: &Value) -> Result<Value, McpError> {
+/// Tool result payload kinds. LIVE-VERIFIED (E100): read tools return
+/// JSON-in-text, while some mutation tools (e.g. `add_marketwatch_symbol`)
+/// return plain human-readable text with `isError: false`. A text success is
+/// still a success — it must not be misclassified as malformed.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ToolOutcome {
+    Json(Value),
+    Text(String),
+}
+
+/// Extracts the tool payload from the JSON-RPC result envelope, preserving
+/// the response kind (JSON vs plain text).
+pub fn extract_tool_result(envelope: &Value) -> Result<ToolOutcome, McpError> {
     if envelope.get("isError").and_then(Value::as_bool) == Some(true) {
         let text = envelope
             .pointer("/content/0/text")
@@ -405,8 +411,21 @@ pub fn extract_tool_json(envelope: &Value) -> Result<Value, McpError> {
         .find(|c| c.get("type").and_then(Value::as_str) == Some("text"))
         .and_then(|c| c.get("text").and_then(Value::as_str))
         .ok_or_else(|| McpError::Malformed("tool result contains no text content".into()))?;
-    serde_json::from_str(text)
-        .map_err(|e| McpError::Malformed(format!("tool text content is not valid JSON: {e}")))
+    match serde_json::from_str::<Value>(text) {
+        Ok(v) => Ok(ToolOutcome::Json(v)),
+        // Non-JSON text with isError:false is a legitimate text success.
+        Err(_) => Ok(ToolOutcome::Text(text.to_string())),
+    }
+}
+
+/// Extracts the tool payload as JSON only — errors on text-only responses.
+pub fn extract_tool_json(envelope: &Value) -> Result<Value, McpError> {
+    match extract_tool_result(envelope)? {
+        ToolOutcome::Json(v) => Ok(v),
+        ToolOutcome::Text(t) => Err(McpError::Malformed(format!(
+            "tool returned plain text where JSON was expected: {t}"
+        ))),
+    }
 }
 
 fn map_transport(e: reqwest::Error, configured_timeout: Duration) -> McpError {

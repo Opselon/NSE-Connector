@@ -34,6 +34,9 @@ pub enum ToolBehavior {
     RawResult(Value),
     /// `content[0].text` present but NOT valid JSON.
     TextNotJson(&'static str),
+    /// LIVE-VERIFIED behavior (E100): mutation tools answer with plain text
+    /// and isError=false — a text success, not a malformed response.
+    TextPlain(&'static str),
     /// `result.isError: true` with a message.
     IsError(String),
     /// Sleep, then answer (timeout scenario).
@@ -301,6 +304,15 @@ async fn mcp_handler(
                         "result": {
                             "isError": true,
                             "content": [ { "type": "text", "text": msg } ]
+                        }
+                    }))
+                    .into_response(),
+                    Some(ToolBehavior::TextPlain(text)) => Json(json!({
+                        "jsonrpc": "2.0",
+                        "id": id,
+                        "result": {
+                            "isError": false,
+                            "content": [ { "type": "text", "text": text } ]
                         }
                     }))
                     .into_response(),

@@ -1,0 +1,22 @@
+{
+ "evidence_id": "E005",
+ "checklist_items": [
+  70
+ ],
+ "action": "get_time_information",
+ "input": {},
+ "latency_ms": 1,
+ "classification": "ok",
+ "raw_output": {
+  "utc_time": "2026-11-16T21:53:00Z",
+  "local_time": "2026-11-17T01:23:00",
+  "local_utc_offset_minutes": 0,
+  "daylight_saving_time": false,
+  "trade_server_last_known_time": "2026-11-16T23:53:00"
+ },
+ "expected": "terminal/broker time basis for date ranges",
+ "verdict": "pass (behavior recorded)",
+ "broker": "MetaQuotes-Demo",
+ "retry_safe": true,
+ "notes": ""
+}

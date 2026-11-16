@@ -22,7 +22,7 @@ mod error;
 
 pub use client::{
     HandshakeInfo, McpClientConfig, McpHttpClient, SUPPORTED_PROTOCOL_VERSION, ToolDescriptor,
-    extract_tool_json,
+    ToolOutcome, extract_tool_json, extract_tool_result,
 };
 pub use error::McpError;
 

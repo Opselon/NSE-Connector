@@ -1,0 +1,20 @@
+{
+ "evidence_id": "E114",
+ "checklist_items": [
+  98
+ ],
+ "action": "market_book_get",
+ "input": {
+  "symbol": "EURUSD"
+ },
+ "latency_ms": 2,
+ "classification": "tool_error",
+ "raw_output": {
+  "tool_error": "Tool 'market_book_get' subscription not found, use market_book_subscribe first"
+ },
+ "expected": "book get after unsubscribe (error expected)",
+ "verdict": "pass",
+ "broker": "MetaQuotes-Demo",
+ "retry_safe": false,
+ "notes": ""
+}

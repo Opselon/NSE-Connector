@@ -1,0 +1,328 @@
+{
+ "get_trading_account_info": {
+  "name": "get_trading_account_info",
+  "description": "Get trading account information from the connected MetaTrader 5 terminal account. This tool is read-only and never places, modifies or cancels orders.",
+  "inputSchema": {
+   "type": "object",
+   "properties": {},
+   "required": [],
+   "additionalProperties": false
+  }
+ },
+ "get_trading_open_positions": {
+  "name": "get_trading_open_positions",
+  "description": "Get currently open trading positions and orders from the connected MetaTrader 5 terminal account. Optionally filter by exact symbol name. Returns detailed information about open positions and orders, including symbol, volume, price, profit, and other relevant data. This tool is read-only and never places, modifies or cancels orders.",
+  "inputSchema": {
+   "type": "object",
+   "properties": {
+    "include_orders": {
+     "type": "boolean",
+     "description": "Include orders in the response. True by default."
+    },
+    "symbol": {
+     "type": "string",
+     "description": "Optional exact MetaTrader symbol filter. Matching is case-insensitive and does not use wildcards or partial matching."
+    }
+   },
+   "required": [],
+   "additionalProperties": false
+  }
+ },
+ "get_trading_history_orders": {
+  "name": "get_trading_history_orders",
+  "description": "Get trading history of orders from the connected MetaTrader 5 terminal account for a datetime range. Optionally filter by exact symbol name. Returns historical orders, deals, execution details, prices, volumes, profit, commission, swap and fees. This tool is read-only and never places, modifies or cancels orders.",
+  "inputSchema": {
+   "type": "object",
+   "properties": {
+    "datetime_from": {
+     "type": "string",
+     "description": "Inclusive start time as ISO datetime."
+    },
+    "datetime_to": {
+     "type": "string",
+     "description": "Exclusive end time as ISO datetime. Must be greater than datetime_from."
+    },
+    "symbol": {
+     "type": "string",
+     "description": "Optional exact MetaTrader symbol filter. Matching is case-insensitive and does not use wildcards or partial matching."
+    },
+    "include_orders": {
+     "type": "boolean",
+     "description": "Include historical orders in the response. True by default."
+    },
+    "include_orders_canceled": {
+     "type": "boolean",
+     "description": "Include canceled historical orders in the response. False by default."
+    },
+    "include_deals": {
+     "type": "boolean",
+     "description": "Include historical deals in the response. True by default."
+    },
+    "limit": {
+     "type": "integer",
+     "description": "Maximum number of records to return. 100000 by default."
+    }
+   },
+   "required": [],
+   "additionalProperties": false
+  }
+ },
+ "get_trading_history_positions": {
+  "name": "get_trading_history_positions",
+  "description": "Get trading history of positions from the connected MetaTrader 5 terminal account for a datetime range. Optionally filter by exact symbol name. Returns aggregated historical trading positions reconstructed from deals. This tool is read-only and never places, modifies or cancels orders.",
+  "inputSchema": {
+   "type": "object",
+   "properties": {
+    "datetime_from": {
+     "type": "string",
+     "description": "Inclusive start time as ISO datetime."
+    },
+    "datetime_to": {
+     "type": "string",
+     "description": "Exclusive end time as ISO datetime. Must be greater than datetime_from."
+    },
+    "symbol": {
+     "type": "string",
+     "description": "Optional exact MetaTrader symbol filter. Matching is case-insensitive and does not use wildcards or partial matching."
+    },
+    "limit": {
+     "type": "integer",
+     "description": "Maximum number of records to return. 100000 by default."
+    }
+   },
+   "required": [],
+   "additionalProperties": false
+  }
+ },
+ "get_time_information": {
+  "name": "get_time_information",
+  "description": "Get time information from the MetaTrader 5 terminal and the local computer. Returns utc_time, local_time, local_utc_offset_minutes and daylight_saving_time. Includes trade_server_last_known_time when available; this value may be older than the current time and the field is omitted when unavailable. This tool is read-only and never places, modifies or cancels orders.",
+  "inputSchema": {
+   "type": "object",
+   "properties": {},
+   "required": [],
+   "additionalProperties": false
+  }
+ },
+ "terminal_get_info": {
+  "name": "terminal_get_info",
+  "description": "Read terminal configuration, connection status, permissions and resource information. Does not modify terminal settings. timestamp is the UTC time when reading begins. connection reports the current state, selected account server, last recorded successful authorization and connection loss in this terminal session. connection.ping_microseconds is the last known server ping. network byte counters are cumulative terminal network-layer counters, not counters for the current connection. Memory and disk sizes are expressed in MB.",
+  "inputSchema": {
+   "type": "object",
+   "properties": {},
+   "required": [],
+   "additionalProperties": false
+  }
+ },
+ "get_marketwatch_symbols": {
+  "name": "get_marketwatch_symbols",
+  "description": "Get the list of symbols currently available in the Market Watch window of the connected MetaTrader 5 terminal. Optionally filter by exact symbol name. Returns detailed information about each symbol, including name, description, and trading conditions. This tool is read-only and never places, modifies or cancels orders.",
+  "inputSchema": {
+   "type": "object",
+   "properties": {
+    "symbol": {
+     "type": "string",
+     "description": "Optional exact MetaTrader symbol filter. Matching is case-insensitive and does not use wildcards or partial matching."
+    },
+    "include_hidden": {
+     "type": "boolean",
+     "description": "Include symbols hidden from Market Watch. When enabled without an exact symbol filter, the response is returned in catalog mode and does not include current quote fields. An exact visible-symbol lookup may still include current quotes. False by default."
+    },
+    "limit": {
+     "type": "integer",
+     "description": "Maximum number of records to return. 1000 by default."
+    }
+   },
+   "required": [],
+   "additionalProperties": false
+  }
+ },
+ "market_book_get": {
+  "name": "market_book_get",
+  "description": "Return the current Depth of Market snapshot for an exact symbol from the connected MetaTrader 5 terminal, including available bid and ask levels, prices, volumes, and entry types. The symbol must have an active subscription created by market_book_subscribe. An empty book may be valid when the broker currently provides no market-depth entries. This tool is read-only and never places, modifies, or cancels trading orders.",
+  "inputSchema": {
+   "type": "object",
+   "properties": {
+    "symbol": {
+     "type": "string",
+     "description": "Exact symbol name as available in the connected MetaTrader 5 terminal, for example EURUSD, XAUUSD or AAPL, depending on the broker symbol set. Matching should not use wildcards or partial names."
+    }
+   },
+   "required": [
+    "symbol"
+   ],
+   "additionalProperties": false
+  }
+ },
+ "get_chart_history": {
+  "name": "get_chart_history",
+  "description": "Get historical chart data for a specified symbol and timeframe from the connected MetaTrader 5 terminal for a datetime range. Returns detailed information about each candlestick, including open, high, low, close, and volume. This tool is read-only and never places, modifies or cancels orders.",
+  "inputSchema": {
+   "type": "object",
+   "properties": {
+    "datetime_from": {
+     "type": "string",
+     "description": "Inclusive start time as ISO datetime."
+    },
+    "datetime_to": {
+     "type": "string",
+     "description": "Exclusive end time as ISO datetime. Must be greater than datetime_from."
+    },
+    "symbol": {
+     "type": "string",
+     "description": "Exact MetaTrader symbol filter. Matching is case-insensitive and does not use wildcards or partial matching."
+    },
+    "period": {
+     "type": "string",
+     "description": "Chart period: M1, M2, M3, M4, M5, M6, M10, M12, M15, M20, M30, H1, H2, H3, H4, H6, H8, H12, D1, W1, MN1."
+    },
+    "limit": {
+     "type": "integer",
+     "description": "Maximum number of records to return. 100000 by default."
+    }
+   },
+   "required": [
+    "datetime_from",
+    "datetime_to",
+    "symbol",
+    "period"
+   ],
+   "additionalProperties": false
+  }
+ },
+ "get_chart_ticks_history": {
+  "name": "get_chart_ticks_history",
+  "description": "Get historical tick data for a specified symbol from the connected MetaTrader 5 terminal for a datetime range. Returns detailed information about each tick, including time, bid, ask, and optional volume. This tool is read-only and never places, modifies or cancels orders.",
+  "inputSchema": {
+   "type": "object",
+   "properties": {
+    "datetime_from": {
+     "type": "string",
+     "description": "Inclusive start time as ISO datetime."
+    },
+    "datetime_to": {
+     "type": "string",
+     "description": "Exclusive end time as ISO datetime. Must be greater than datetime_from."
+    },
+    "symbol": {
+     "type": "string",
+     "description": "Exact MetaTrader symbol filter. Matching is case-insensitive and does not use wildcards or partial matching."
+    },
+    "limit": {
+     "type": "integer",
+     "description": "Maximum number of records to return. 100000 by default."
+    }
+   },
+   "required": [
+    "datetime_from",
+    "datetime_to",
+    "symbol"
+   ],
+   "additionalProperties": false
+  }
+ },
+ "trade_order_calc_margin": {
+  "name": "trade_order_calc_margin",
+  "description": "Calculate the margin required for a hypothetical buy or sell order using the connected MetaTrader 5 account and the current symbol trading conditions. The calculation does not place an order and does not modify the trading account. Existing positions and pending orders are not taken into account. The returned margin is expressed in the account deposit currency.",
+  "inputSchema": {
+   "type": "object",
+   "properties": {
+    "symbol": {
+     "type": "string",
+     "description": "Exact symbol name from Market Watch, for example EURUSD, XAUUSD or AAPL."
+    },
+    "type": {
+     "type": "string",
+     "description": "Order side used for the margin calculation. Allowed values are buy and sell. Matching is case-insensitive. Leading or trailing whitespace is not accepted."
+    },
+    "volume": {
+     "type": "number",
+     "description": "Order volume in lots as a decimal number. The value must be finite and greater than zero."
+    },
+    "price": {
+     "type": "number",
+     "description": "Open price as a decimal number. Before margin calculation, the price is rounded to the precision supported by the symbol and must remain greater than zero after rounding."
+    }
+   },
+   "required": [
+    "symbol",
+    "type",
+    "volume",
+    "price"
+   ],
+   "additionalProperties": false
+  }
+ },
+ "trade_order_calc_profit": {
+  "name": "trade_order_calc_profit",
+  "description": "Calculate the estimated profit or loss of a hypothetical buy or sell trade using the connected MetaTrader 5 account and the current symbol trading conditions. This operation performs a mathematical profit calculation only. The calculation does not place an order and does not modify the trading account. Existing positions and pending orders are not taken into account. The returned profit is expressed in the account deposit currency.",
+  "inputSchema": {
+   "type": "object",
+   "properties": {
+    "symbol": {
+     "type": "string",
+     "description": "Exact symbol name from Market Watch, for example EURUSD, XAUUSD or AAPL."
+    },
+    "type": {
+     "type": "string",
+     "description": "Hypothetical trade side used for the profit calculation. Allowed values are buy and sell. Matching is case-insensitive. Leading or trailing whitespace is not accepted."
+    },
+    "volume": {
+     "type": "number",
+     "description": "Hypothetical order volume in lots as a decimal number. The value must be finite and greater than zero."
+    },
+    "price_open": {
+     "type": "number",
+     "description": "Open price as a decimal number. The value must be finite, greater than zero, and within the price range supported by the terminal. Before calculation, the price is rounded to the precision supported by the symbol and must remain greater than zero after rounding."
+    },
+    "price_close": {
+     "type": "number",
+     "description": "Close price as a decimal number. The value must be finite, greater than zero, and within the price range supported by the terminal. Before calculation, the price is rounded to the precision supported by the symbol and must remain greater than zero after rounding."
+    }
+   },
+   "required": [
+    "symbol",
+    "type",
+    "volume",
+    "price_open",
+    "price_close"
+   ],
+   "additionalProperties": false
+  }
+ },
+ "trade_check_market_order": {
+  "name": "trade_check_market_order",
+  "description": "Checks whether a hypothetical buy or sell market order can be accepted for the connected MetaTrader 5 account under the current symbol, price, margin, volume conditions, and there are enough money to execute it. The check does not place an order and does not modify the trading account.",
+  "inputSchema": {
+   "type": "object",
+   "properties": {
+    "symbol": {
+     "type": "string",
+     "description": "Exact symbol name from Market Watch, for example EURUSD, XAUUSD or AAPL."
+    },
+    "type": {
+     "type": "string",
+     "description": "Market order side: buy or sell. Current market price will be used. Matching is case-insensitive."
+    },
+    "volume": {
+     "type": "number",
+     "description": "Order volume in lots as a decimal number. The value must be finite and greater than zero and must comply with the symbol's minimum volume, maximum volume, and volume-step requirements."
+    },
+    "sl": {
+     "type": "number",
+     "description": "Optional stop loss price as a decimal number. Omit to place without stop loss."
+    },
+    "tp": {
+     "type": "number",
+     "description": "Optional take profit price as a decimal number. Omit to place without take profit."
+    }
+   },
+   "required": [
+    "symbol",
+    "type",
+    "volume"
+   ],
+   "additionalProperties": false
+  }
+ }
+}
