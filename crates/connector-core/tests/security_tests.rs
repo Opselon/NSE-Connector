@@ -19,8 +19,12 @@ use connector_core::nse::{
 };
 use connector_core::security::commands::{CommandOperation, CommandRejection, CommandValidator};
 use connector_core::security::secrets::{
-    MemorySecretStore, Secret, SecretStore, WindowsCredentialStore,
+    MemorySecretStore, Secret, SecretStore,
 };
+
+// Windows-only store (the roundtrip test below is cfg-gated too).
+#[cfg(windows)]
+use connector_core::security::WindowsCredentialStore;
 use connector_core::security::{mask_login, redact_text};
 use serde_json::json;
 use std::time::Instant;
