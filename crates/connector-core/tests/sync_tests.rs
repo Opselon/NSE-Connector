@@ -53,11 +53,15 @@ async fn fetch_build_deliver(
     let batch = match tool {
         connector_core::mcp::trading_tools::ACCOUNT_INFO => {
             let snap = mt5::account_snapshot(&payload).expect("map");
-            engine.build_account_batch(&snap)
+            engine
+                .build_account_batch(&snap)
+                .expect("serialize snapshot")
         }
         connector_core::mcp::trading_tools::OPEN_POSITIONS => {
             let pos = mt5::open_positions(&payload).expect("map");
-            engine.build_positions_batch(&pos)
+            engine
+                .build_positions_batch(&pos)
+                .expect("serialize positions")
         }
         connector_core::mcp::trading_tools::HISTORY_ORDERS => {
             let hist = mt5::history_orders(&payload).expect("map");
@@ -439,7 +443,9 @@ async fn end_to_end_ack_via_mock_nse() {
             .expect("account"),
     )
     .expect("map");
-    let batch = engine.build_account_batch(&snap);
+    let batch = engine
+        .build_account_batch(&snap)
+        .expect("serialize snapshot");
     engine.queue(batch.clone());
     assert_eq!(engine.pending_count(), 1);
 

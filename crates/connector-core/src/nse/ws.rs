@@ -24,6 +24,12 @@ pub struct NseSocketConfig {
     pub backoff_initial: Duration,
     pub backoff_max: Duration,
     pub heartbeat_interval: Duration,
+    /// Bounded WS handshake — a hung host must not stall the supervisor
+    /// (every outbound call gets a timeout).
+    pub connect_timeout: Duration,
+    /// Bounded per-frame send — a dead peer with a full TCP buffer must not
+    /// wedge the session loop; a timed-out send is treated as a disconnect.
+    pub send_timeout: Duration,
 }
 
 impl Default for NseSocketConfig {
@@ -35,6 +41,8 @@ impl Default for NseSocketConfig {
             backoff_initial: Duration::from_millis(500),
             backoff_max: Duration::from_secs(30),
             heartbeat_interval: Duration::from_secs(15),
+            connect_timeout: Duration::from_secs(10),
+            send_timeout: Duration::from_secs(10),
         }
     }
 }
@@ -143,7 +151,7 @@ async fn run_loop(
                     tokio::select! {
                         _ = shutdown_rx.changed() => {
                             if *shutdown_rx.borrow() {
-                                let _ = sink.close().await;
+                                let _ = tokio::time::timeout(cfg.send_timeout, sink.close()).await;
                                 return;
                             }
                         }
@@ -153,19 +161,27 @@ async fn run_loop(
                                 "device_id": cfg.device_id,
                             })
                             .to_string();
-                            if sink.send(Message::text(frame)).await.is_err() {
+                            if tokio::time::timeout(cfg.send_timeout, sink.send(Message::text(frame)))
+                                .await
+                                .is_err()
+                            {
+                                tracing::warn!("NSE WebSocket heartbeat send timed out; reconnecting");
                                 break;
                             }
                         }
                         msg = outbound_rx.recv() => {
                             match msg {
                                 Some(m) => {
-                                    if sink.send(Message::text(m)).await.is_err() {
+                                    if tokio::time::timeout(cfg.send_timeout, sink.send(Message::text(m)))
+                                        .await
+                                        .is_err()
+                                    {
+                                        tracing::warn!("NSE WebSocket send timed out; reconnecting");
                                         break;
                                     }
                                 }
                                 None => {
-                                    let _ = sink.close().await;
+                                    let _ = tokio::time::timeout(cfg.send_timeout, sink.close()).await;
                                     return;
                                 }
                             }
@@ -255,8 +271,9 @@ async fn open_session(
         .header("X-NSE-Device-Id", &cfg.device_id)
         .body(())
         .map_err(|e| NseError::Ws(format!("failed to build WS request: {e}")))?;
-    let (ws, _resp) = connect_async(request)
+    let (ws, _resp) = tokio::time::timeout(cfg.connect_timeout, connect_async(request))
         .await
+        .map_err(|_| NseError::Ws("connect timed out".into()))?
         .map_err(|e| NseError::Ws(format!("connect failed: {e}")))?;
     Ok(ws)
 }

@@ -76,7 +76,9 @@ async fn mt5_credential_never_reaches_nse_core() {
     .expect("map");
     let batch = {
         let mut engine = connector_core::sync::SyncEngine::new(Default::default());
-        engine.build_account_batch(&snap)
+        engine
+            .build_account_batch(&snap)
+            .expect("serialize snapshot")
     };
     let nse = nse_client(&mock_nse, NSE_KEY);
     let _ = nse

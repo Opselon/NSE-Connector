@@ -1,0 +1,23 @@
+{
+ "evidence_id": "T025",
+ "checklist_items": [
+  114,
+  115,
+  116
+ ],
+ "action": "trade_modify_sl_tp",
+ "input": {
+  "symbol": "EURUSD",
+  "position_ticket": "99*****99",
+  "sl": 1.0
+ },
+ "latency_ms": 1,
+ "classification": "tool_error",
+ "raw_output": {
+  "tool_error": "Tool 'trade_modify_sl_tp' trading is not permitted"
+ },
+ "verdict": "pass",
+ "broker": "MetaQuotes-Demo",
+ "notes": "expected rejection: modify nonexistent position",
+ "retry_safe": false
+}

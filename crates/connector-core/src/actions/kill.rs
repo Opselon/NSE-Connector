@@ -54,16 +54,28 @@ impl KillSwitch {
             KillScope::Global => self.global.store(true, Ordering::SeqCst),
             KillScope::AutoTrade => self.auto_trade.store(true, Ordering::SeqCst),
             KillScope::User(u) => {
-                self.users.write().expect("lock").insert(u.clone());
+                self.users
+                    .write()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .insert(u.clone());
             }
             KillScope::Account(a) => {
-                self.accounts.write().expect("lock").insert(a.clone());
+                self.accounts
+                    .write()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .insert(a.clone());
             }
             KillScope::Device(d) => {
-                self.devices.write().expect("lock").insert(d.clone());
+                self.devices
+                    .write()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .insert(d.clone());
             }
             KillScope::Category(c) => {
-                self.categories.write().expect("lock").insert(c.clone());
+                self.categories
+                    .write()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .insert(c.clone());
             }
         }
         tracing::warn!(scope = scope.kind(), "kill switch ENGAGED");
@@ -74,16 +86,28 @@ impl KillSwitch {
             KillScope::Global => self.global.store(false, Ordering::SeqCst),
             KillScope::AutoTrade => self.auto_trade.store(false, Ordering::SeqCst),
             KillScope::User(u) => {
-                self.users.write().expect("lock").remove(u);
+                self.users
+                    .write()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .remove(u);
             }
             KillScope::Account(a) => {
-                self.accounts.write().expect("lock").remove(a);
+                self.accounts
+                    .write()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .remove(a);
             }
             KillScope::Device(d) => {
-                self.devices.write().expect("lock").remove(d);
+                self.devices
+                    .write()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .remove(d);
             }
             KillScope::Category(c) => {
-                self.categories.write().expect("lock").remove(c);
+                self.categories
+                    .write()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .remove(c);
             }
         }
         tracing::info!(scope = scope.kind(), "kill switch lifted");
@@ -110,17 +134,36 @@ impl KillSwitch {
             return Some(KillScope::AutoTrade);
         }
         if let Some(u) = user_id
-            && self.users.read().expect("lock").contains(u)
+            && self
+                .users
+                .read()
+                .unwrap_or_else(|e| e.into_inner())
+                .contains(u)
         {
             return Some(KillScope::User(u.to_string()));
         }
-        if self.accounts.read().expect("lock").contains(account_id) {
+        if self
+            .accounts
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .contains(account_id)
+        {
             return Some(KillScope::Account(account_id.to_string()));
         }
-        if self.devices.read().expect("lock").contains(device_id) {
+        if self
+            .devices
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .contains(device_id)
+        {
             return Some(KillScope::Device(device_id.to_string()));
         }
-        if self.categories.read().expect("lock").contains(category) {
+        if self
+            .categories
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .contains(category)
+        {
             return Some(KillScope::Category(category.to_string()));
         }
         None

@@ -1,0 +1,19 @@
+{
+ "evidence_id": "T022",
+ "checklist_items": [
+  51
+ ],
+ "action": "trade_send_pending_order",
+ "input": {
+  "type": "sell_stop_limit"
+ },
+ "latency_ms": 0,
+ "classification": "skipped",
+ "raw_output": {
+  "note": "sell_stop_limit not accepted"
+ },
+ "verdict": "record: sell_stop_limit unavailable",
+ "broker": "MetaQuotes-Demo",
+ "notes": "",
+ "retry_safe": false
+}

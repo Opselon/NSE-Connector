@@ -6,10 +6,11 @@
 //!   discovery, tool calls).
 //! - [`mt5`]: tolerant MT5 data models and mapping from MCP tool-call
 //!   envelopes to typed snapshots.
-//! - [`actions`]: the 106-action architecture — dynamic manifest with count
-//!   validation, risk classification (Tier 0-3), universal dispatcher with
-//!   local safety gates, NSE JSON contract envelopes, kill switch, and the
-//!   broker symbol registry.
+//! - [`actions`]: the action architecture — dynamic manifest validated
+//!   against the directive checklist (136 items → 107 live server actions,
+//!   see docs/GAP_ANALYSIS.md), risk classification (Tier 0-3), universal
+//!   dispatcher with local safety gates, NSE JSON contract envelopes, kill
+//!   switch, and the broker symbol registry.
 //! - [`nse`]: NSE Core gateway client (REST) and the WebSocket sync socket.
 //!   The REST contract here is the *proposed* connector contract — the real
 //!   NSE Core endpoints are the authority and must be reconciled against the
@@ -20,6 +21,7 @@
 //!   validator (allowlist, expiry, replay, device/account binding).
 
 pub mod actions;
+pub mod bridge;
 pub mod mcp;
 pub mod mt5;
 pub mod nse;

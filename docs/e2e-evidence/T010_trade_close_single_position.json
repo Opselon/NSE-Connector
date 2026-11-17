@@ -1,0 +1,17 @@
+{
+ "evidence_id": "T010",
+ "checklist_items": [
+  29
+ ],
+ "action": "trade_close_single_position",
+ "input": {},
+ "latency_ms": 0,
+ "classification": "ok",
+ "raw_output": {
+  "note": "no new sell position found"
+ },
+ "verdict": "FAIL: SELL position not found",
+ "broker": "MetaQuotes-Demo",
+ "notes": "",
+ "retry_safe": true
+}

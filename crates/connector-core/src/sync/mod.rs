@@ -101,21 +101,34 @@ impl SyncEngine {
         self.pending.len()
     }
 
-    /// Builds an account snapshot batch.
-    pub fn build_account_batch(&mut self, snap: &AccountSnapshot) -> SyncBatch {
-        let items = serde_json::to_value(snap).unwrap_or(Value::Null);
-        self.make_batch(
-            BatchKind::Account,
-            items,
-            snap.account.login.as_deref().map_or(0, |_| 1),
-        )
+    /// Builds an account snapshot batch. Returns `None` (with an error log)
+    /// if serialization fails — a failed snapshot must never ship as a
+    /// fabricated `null` batch.
+    pub fn build_account_batch(&mut self, snap: &AccountSnapshot) -> Option<SyncBatch> {
+        match serde_json::to_value(snap) {
+            Ok(items) => Some(self.make_batch(
+                BatchKind::Account,
+                items,
+                snap.account.login.as_deref().map_or(0, |_| 1),
+            )),
+            Err(e) => {
+                tracing::error!(error = %e, "account snapshot serialization failed; batch skipped");
+                None
+            }
+        }
     }
 
     /// Builds a positions batch from the current open positions/orders.
-    pub fn build_positions_batch(&mut self, pos: &OpenPositionsResponse) -> SyncBatch {
+    /// Returns `None` (with an error log) if serialization fails.
+    pub fn build_positions_batch(&mut self, pos: &OpenPositionsResponse) -> Option<SyncBatch> {
         let count = pos.positions.len() + pos.orders.len();
-        let items = serde_json::to_value(pos).unwrap_or(Value::Null);
-        self.make_batch(BatchKind::Positions, items, count)
+        match serde_json::to_value(pos) {
+            Ok(items) => Some(self.make_batch(BatchKind::Positions, items, count)),
+            Err(e) => {
+                tracing::error!(error = %e, "positions serialization failed; batch skipped");
+                None
+            }
+        }
     }
 
     /// Builds a history batch: deduplicates deals AND orders by ticket
@@ -259,7 +272,8 @@ impl SyncEngine {
     }
 }
 
-/// Bounded deduplication set with approximate FIFO/LRU eviction.
+/// Bounded deduplication set with FIFO eviction (insertion order, not
+/// recency).
 pub struct DedupSet {
     capacity: usize,
     seen: HashSet<String>,

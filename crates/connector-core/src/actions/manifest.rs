@@ -109,7 +109,8 @@ impl ActionManifest {
         self.actions.get(name)
     }
 
-    /// Count validation against the expected 106 (spec §3.2).
+    /// Count validation against the directive checklist (136 items) —
+    /// fewer-than-expected live actions are reported, never invented.
     pub fn verify_count(&self, expected: usize) -> CountReport {
         let actual = self.action_count;
         let delta = actual as i64 - expected as i64;

@@ -1,0 +1,22 @@
+{
+ "evidence_id": "T000a",
+ "checklist_items": [
+  7,
+  10,
+  11
+ ],
+ "action": "get_trading_account_info",
+ "input": {},
+ "latency_ms": 0,
+ "classification": "ok",
+ "raw_output": {
+  "type": "demo",
+  "margin_mode": "hedging",
+  "currency": "USD",
+  "leverage_field_present": false
+ },
+ "verdict": "pass: demo account confirmed",
+ "broker": "MetaQuotes-Demo",
+ "notes": "pre-existing balance/equity recorded; no leverage field (derivable via calc)",
+ "retry_safe": true
+}

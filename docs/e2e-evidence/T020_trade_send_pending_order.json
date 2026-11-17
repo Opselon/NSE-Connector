@@ -1,0 +1,19 @@
+{
+ "evidence_id": "T020",
+ "checklist_items": [
+  49
+ ],
+ "action": "trade_send_pending_order",
+ "input": {
+  "type": "sell_stop"
+ },
+ "latency_ms": 0,
+ "classification": "skipped",
+ "raw_output": {
+  "note": "sell_stop not accepted"
+ },
+ "verdict": "record: sell_stop unavailable",
+ "broker": "MetaQuotes-Demo",
+ "notes": "",
+ "retry_safe": false
+}

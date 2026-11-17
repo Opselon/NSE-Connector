@@ -42,11 +42,17 @@ pub struct SubscriptionInfo {
 /// (`false` / `0` are exactly what the derived `Default` produces).
 #[derive(Debug, Clone, Deserialize, Default, PartialEq)]
 pub struct Entitlements {
+    #[serde(default)]
     pub history_sync: bool,
+    #[serde(default)]
     pub ai_coach: bool,
+    #[serde(default)]
     pub position_manager: bool,
+    #[serde(default)]
     pub auto_trade: bool,
+    #[serde(default)]
     pub max_devices: u32,
+    #[serde(default)]
     pub max_accounts: u32,
 }
 
