@@ -30,6 +30,9 @@ pub struct NseSocketConfig {
     /// Bounded per-frame send — a dead peer with a full TCP buffer must not
     /// wedge the session loop; a timed-out send is treated as a disconnect.
     pub send_timeout: Duration,
+    /// Inbound liveness watchdog — reconnect when no frame arrives within
+    /// this window (server death timeout is 45s).
+    pub death_timeout: Duration,
 }
 
 impl Default for NseSocketConfig {
@@ -43,24 +46,32 @@ impl Default for NseSocketConfig {
             heartbeat_interval: Duration::from_secs(15),
             connect_timeout: Duration::from_secs(10),
             send_timeout: Duration::from_secs(10),
+            // Inbound liveness watchdog — matches the Platform's death
+            // timeout (WS_DEATH_SECS = 45s, 3 missed 15s beats). A silent
+            // peer with a healthy TCP connection is treated as dead.
+            death_timeout: Duration::from_secs(45),
         }
     }
 }
 
-/// Server-to-connector messages (spec §5D/§6/§7). Anything that does not
-/// parse is silently ignored — a malformed frame must not crash the sync
-/// loop.
+/// Server-to-connector messages (spec §5D/§6/§7 + as-built Platform frames).
+/// Anything that does not parse is silently ignored — a malformed frame must
+/// not crash the sync loop.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ServerMessage {
     /// Authorized command envelope (validated locally before any use — see
     /// `security::commands::CommandValidator`).
     Command(Value),
-    /// Server asks for an out-of-band refresh.
+    /// Server asks for an out-of-band refresh (reason: login_unknown /
+    /// account_switched in the as-built dialect).
     SyncRequest,
-    /// Batch acknowledgment.
+    /// Batch acknowledgment (proposed dialect; carries the batch id).
     Ack {
         batch_id: String,
     },
+    /// Generic acknowledgment without a batch id (as-built: action.result /
+    /// manifest.update confirmations).
+    AckGeneric,
     HeartbeatOk,
 }
 
@@ -71,9 +82,12 @@ pub fn parse_server_message(text: &str) -> Option<ServerMessage> {
     match kind {
         "command" => Some(ServerMessage::Command(v.clone())),
         "sync_request" => Some(ServerMessage::SyncRequest),
-        "ack" => Some(ServerMessage::Ack {
-            batch_id: v.get("batch_id")?.as_str()?.to_string(),
-        }),
+        "ack" => match v.get("batch_id").and_then(Value::as_str) {
+            Some(batch_id) => Some(ServerMessage::Ack {
+                batch_id: batch_id.to_string(),
+            }),
+            None => Some(ServerMessage::AckGeneric),
+        },
         "heartbeat" => Some(ServerMessage::HeartbeatOk),
         _ => None,
     }
@@ -146,9 +160,22 @@ async fn run_loop(
                 let (mut sink, mut stream) = ws.split();
                 let mut heartbeat = tokio::time::interval(cfg.heartbeat_interval);
                 heartbeat.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+                // Inbound liveness watchdog: any inbound frame restarts the
+                // window. A silent peer (healthy TCP, no frames) is dead —
+                // force a reconnect instead of hanging forever.
+                let mut last_inbound = std::time::Instant::now();
                 let mut clean_close = false;
                 loop {
+                    let deadline = tokio::time::Instant::from_std(last_inbound + cfg.death_timeout);
                     tokio::select! {
+                        _ = tokio::time::sleep_until(deadline) => {
+                            tracing::warn!(
+                                timeout_secs = cfg.death_timeout.as_secs(),
+                                "no inbound frames within the death window — treating peer as dead; reconnecting"
+                            );
+                            let _ = tokio::time::timeout(cfg.send_timeout, sink.close()).await;
+                            break;
+                        }
                         _ = shutdown_rx.changed() => {
                             if *shutdown_rx.borrow() {
                                 let _ = tokio::time::timeout(cfg.send_timeout, sink.close()).await;
@@ -189,6 +216,7 @@ async fn run_loop(
                         frame = stream.next() => {
                             match frame {
                                 Some(Ok(Message::Text(t))) => {
+                                    last_inbound = std::time::Instant::now();
                                     if inbound_tx.send(t.to_string()).await.is_err() {
                                         let _ = sink.close().await;
                                         return;

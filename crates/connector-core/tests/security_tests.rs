@@ -234,6 +234,10 @@ fn login_is_masked_in_diagnostics() {
 // Secret storage (REAL Windows Credential Manager integration)
 // ---------------------------------------------------------------------------
 
+// Windows Credential Manager is Windows-only; CI runs the suite on Linux
+// where this store has no backend (the port is exercised by the memory
+// implementation everywhere else).
+#[cfg(windows)]
 #[test]
 fn windows_credential_store_roundtrip_without_plaintext_files() {
     let service = "NSE-Connector-Tests";

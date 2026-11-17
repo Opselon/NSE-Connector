@@ -77,7 +77,7 @@ crates/connector-core/
 cargo test --workspace
 ```
 
-132 tests across all spec §16 categories; mocks inject every failure mode
+155 tests across all spec §16 categories PLUS the 15-scenario WebSocket reliability suite (`tests/ws_reliability_tests.rs`, real-TCP mock Platform); mocks inject every failure mode
 (bad auth, malformed JSON, timeouts, session loss, expired/revoked keys,
 kill switch, replays...).
 

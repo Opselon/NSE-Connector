@@ -20,24 +20,18 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
-use connector_core::actions::dispatcher::{
-    ActionDispatcher, ActionRequest, DispatchContext, DispatchOutcome, DispatchRejection,
-};
+use connector_core::actions::dispatcher::{ActionDispatcher, DispatchContext};
 use connector_core::actions::kill::KillSwitch;
 use connector_core::actions::manifest::{ActionManifest, EXPECTED_ACTION_COUNT};
 use connector_core::actions::risk::RiskTier;
 use connector_core::bridge;
 use connector_core::mcp::{McpClientConfig, McpHttpClient, trading_tools};
-use connector_core::mt5;
+use connector_core::nse::session;
 use connector_core::nse::{
-    ManagedSocket, NseGatewayClient, NseGatewayConfig, NseSocketConfig, ServerMessage,
-    SyncBatchRequest, parse_server_message,
+    CommandJournal, ManagedSocket, NseGatewayClient, NseGatewayConfig, NseSocketConfig,
 };
 use connector_core::security::secrets::{Secret, SecretStore, WindowsCredentialStore};
 use connector_core::sync::{SyncConfig, SyncEngine};
-use serde_json::{Value, json};
-use time::OffsetDateTime;
-use time::macros::format_description;
 
 const CREDENTIAL_SERVICE: &str = "NSE Connector";
 const STATE_DIR: &str = "nse-connector";
@@ -320,6 +314,22 @@ async fn run() -> i32 {
     }
 
     // ---- Local safety gates + dispatch context ------------------------------
+    // §4 "no duplicate command execution after reconnect": the persistent
+    // journal gates every dispatch. The bridge refuses to run without it.
+    let journal_path = match state_dir() {
+        Ok(d) => d.join("executed_commands.jsonl"),
+        Err(e) => {
+            tracing::error!("state directory unavailable: {e}");
+            return 2;
+        }
+    };
+    let journal = match CommandJournal::open_with_capacity(journal_path, 10_000) {
+        Ok(j) => std::sync::Arc::new(j),
+        Err(e) => {
+            tracing::error!("command journal unavailable — refusing to run: {e}");
+            return 2;
+        }
+    };
     let kill = std::sync::Arc::new(KillSwitch::new());
     let dispatcher = ActionDispatcher::new(manifest, kill.clone());
     let mut ctx = DispatchContext::new(cfg.device_id.clone());
@@ -355,6 +365,17 @@ async fn run() -> i32 {
     let mut engine = SyncEngine::new(SyncConfig::default());
     let mut sync_tick = tokio::time::interval(cfg.sync_interval);
     sync_tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+    // Tell the Platform what manifest this connector runs (as-built
+    // `manifest.update`); the server acks and can flag drift.
+    let manifest_frame = session::manifest_update_frame(&dispatcher.manifest());
+    if socket
+        .outbound
+        .send(manifest_frame.to_string())
+        .await
+        .is_err()
+    {
+        tracing::warn!("manifest.update could not be queued — will not retry this session");
+    }
     tracing::info!("bridge is up — listening for platform frames");
 
     let exit_code = loop {
@@ -364,22 +385,34 @@ async fn run() -> i32 {
                 break 0;
             }
             _ = sync_tick.tick() => {
-                sync_cycle(&mut mcp, &mut engine, &gateway, &mut ctx, &state).await;
+                let mut deps = session::SessionDeps {
+                    mcp: &mut mcp,
+                    ctx: &mut ctx,
+                    dispatcher: &dispatcher,
+                    engine: &mut engine,
+                    gateway: &gateway,
+                    state: &state,
+                    journal: &journal,
+                    outbound: &socket.outbound,
+                };
+                session::sync_cycle(&mut deps).await;
             }
             frame = socket.inbound.recv() => {
                 let Some(text) = frame else {
                     tracing::warn!("bridge socket closed");
                     break 5;
                 };
-                let router = FrameRouter {
-                    engine: &mut engine,
-                    gateway: &gateway,
+                let mut deps = session::SessionDeps {
+                    mcp: &mut mcp,
                     ctx: &mut ctx,
                     dispatcher: &dispatcher,
-                    socket: &socket,
+                    engine: &mut engine,
+                    gateway: &gateway,
                     state: &state,
+                    journal: &journal,
+                    outbound: &socket.outbound,
                 };
-                handle_frame(&text, &mut mcp, router).await;
+                session::handle_platform_frame(&text, &mut deps).await;
             }
         }
     };
@@ -387,285 +420,4 @@ async fn run() -> i32 {
     socket.shutdown().await;
     tracing::info!(pending_batches = engine.pending_count(), "bridge stopped");
     exit_code
-}
-
-/// Everything a platform frame needs, bundled to keep signatures small.
-struct FrameRouter<'a> {
-    engine: &'a mut SyncEngine,
-    gateway: &'a NseGatewayClient,
-    ctx: &'a mut DispatchContext,
-    dispatcher: &'a ActionDispatcher,
-    socket: &'a ManagedSocket,
-    state: &'a std::sync::Arc<bridge::BridgeState>,
-}
-
-/// One frame from the platform: command / sync_request / ack / heartbeat.
-async fn handle_frame(text: &str, mcp: &mut McpHttpClient, r: FrameRouter<'_>) {
-    // Parse once: bridge commands and native actions share the envelope.
-    let req: Option<ActionRequest> = serde_json::from_str(text).ok();
-    if let (Some(req), Some(spec)) = (
-        req.as_ref(),
-        req.as_ref().and_then(|r| bridge::lookup(&r.action_name)),
-    ) {
-        // ---- Bridge command path (90-command surface) ----
-        let dispatcher = r.dispatcher;
-        let replay_ok = |key: &str| dispatcher.check_replay(key);
-        match bridge::gate_check(req, r.ctx, dispatcher.kill_switch(), replay_ok, spec) {
-            Ok(()) => {
-                let t0 = std::time::Instant::now();
-                let manifest_arc = dispatcher.manifest();
-                let mut deps = bridge::BridgeDeps {
-                    mcp,
-                    manifest: &manifest_arc,
-                    state: r.state,
-                };
-                let result = bridge::execute(&req.action_name, &req.parameters, &mut deps).await;
-                let latency = u64::try_from(t0.elapsed().as_millis()).unwrap_or(u64::MAX);
-                let outcome = match &result {
-                    Ok(_) => bridge::CommandOutcome::Executed,
-                    Err(f) if f.code == "mt5_error" => bridge::CommandOutcome::McpFailed,
-                    Err(f) if f.code == "invalid_params" => bridge::CommandOutcome::Rejected,
-                    // not_available is a truthful capability answer, not a failure.
-                    Err(_) => bridge::CommandOutcome::Executed,
-                };
-                r.state.observe_command(&req.action_name, outcome, latency);
-                if matches!(outcome, bridge::CommandOutcome::McpFailed)
-                    && let Err(f) = &result
-                {
-                    r.state
-                        .set_last_error(format!("{}: {}", req.action_name, f.message));
-                }
-                send_bridge_result(r.socket, req, result).await;
-                return;
-            }
-            Err(rejection) => {
-                r.state
-                    .observe_command(&req.action_name, bridge::CommandOutcome::Rejected, 0);
-                send_rejection(r.socket, text, rejection).await;
-                return;
-            }
-        }
-    }
-    // ---- Native MCP action path (manifest action names) ----
-    match parse_server_message(text) {
-        Some(ServerMessage::Command(_)) => match r.dispatcher.dispatch(mcp, text, r.ctx).await {
-            Ok(outcome) => send_outcome(r.socket, &outcome).await,
-            Err(rejection) => send_rejection(r.socket, text, rejection).await,
-        },
-        Some(ServerMessage::SyncRequest) => {
-            tracing::info!("platform requested a sync");
-            sync_cycle(mcp, r.engine, r.gateway, r.ctx, r.state).await;
-        }
-        Some(ServerMessage::Ack { batch_id }) => {
-            if r.engine.mark_acked(&batch_id) {
-                tracing::debug!(batch_id = %batch_id, "batch acknowledged");
-            }
-        }
-        Some(ServerMessage::HeartbeatOk) => tracing::trace!("platform heartbeat ok"),
-        None => tracing::warn!(frame = %text, "unparseable server frame ignored"),
-    }
-}
-
-/// Bridge-command result: the uniform JSON envelope rides inside the
-/// `action.result` frame the Platform already understands.
-async fn send_bridge_result(
-    socket: &ManagedSocket,
-    req: &ActionRequest,
-    result: Result<serde_json::Value, bridge::BridgeFailure>,
-) {
-    let is_mt5_failure = matches!(
-        &result,
-        Err(f) if f.code == "mt5_error"
-    );
-    let envelope = bridge::envelope(&req.action_name, result);
-    let ok_flag = envelope["ok"].clone();
-    let frame = json!({
-        "type": "action.result",
-        "request_id": req.request_id,
-        "command_id": req.command_id,
-        "action_name": req.action_name,
-        "account_id": req.account_id,
-        "device_id": req.device_id,
-        "status": if is_mt5_failure { "mcp_failed" } else { "executed" },
-        "actual_mcp_result": envelope,
-        "execution_error": if is_mt5_failure {
-            envelope["error"]["message"].clone()
-        } else {
-            Value::Null
-        },
-        "correlation_id": req.request_id,
-    });
-    tracing::info!(
-        command_id = %req.command_id,
-        action = %req.action_name,
-        ok = %ok_flag,
-        "bridge action result reported"
-    );
-    if socket.outbound.send(frame.to_string()).await.is_err() {
-        tracing::warn!("failed to queue bridge action result — socket backpressured");
-    }
-}
-
-async fn send_outcome(socket: &ManagedSocket, outcome: &DispatchOutcome) {
-    let mut frame = match serde_json::to_value(outcome) {
-        Ok(v) => v,
-        Err(e) => {
-            tracing::error!(error = %e, "outcome serialization failed");
-            return;
-        }
-    };
-    frame["type"] = json!("action.result");
-    tracing::info!(
-        command_id = %outcome.command_id,
-        action = %outcome.action_name,
-        status = outcome.status.as_str(),
-        duration_ms = outcome.duration_ms,
-        "action result reported"
-    );
-    if socket.outbound.send(frame.to_string()).await.is_err() {
-        tracing::warn!("failed to queue action result — socket backpressured");
-    }
-}
-
-/// A rejected command NEVER reached MT5; the reason goes back verbatim.
-async fn send_rejection(socket: &ManagedSocket, raw: &str, rejection: DispatchRejection) {
-    let parsed: Value = serde_json::from_str(raw).unwrap_or_else(|_| json!({}));
-    let frame = json!({
-        "type": "action.result",
-        "request_id": parsed.get("request_id").cloned().unwrap_or(Value::Null),
-        "command_id": parsed.get("command_id").cloned().unwrap_or(Value::Null),
-        "action_name": parsed.get("action_name").cloned().unwrap_or(Value::Null),
-        "status": "rejected",
-        "validation_errors": [rejection.to_string()],
-        "correlation_id": parsed.get("request_id").cloned().unwrap_or(Value::Null),
-    });
-    tracing::warn!(reason = %rejection, "command rejected locally");
-    if socket.outbound.send(frame.to_string()).await.is_err() {
-        tracing::warn!("failed to queue rejection — socket backpressured");
-    }
-}
-
-/// Pulls account/positions/history from the terminal and delivers bounded
-/// batches to the platform. Failures are logged and retained for retry — a
-/// failed cycle never drops data.
-async fn sync_cycle(
-    mcp: &mut McpHttpClient,
-    engine: &mut SyncEngine,
-    gateway: &NseGatewayClient,
-    ctx: &mut DispatchContext,
-    state: &std::sync::Arc<bridge::BridgeState>,
-) {
-    state.note_sync();
-    // Account snapshot (also extends local account binding on first sight).
-    match mcp
-        .call_tool_json(trading_tools::ACCOUNT_INFO, &json!({}))
-        .await
-    {
-        Ok(payload) => match mt5::account_snapshot(&payload) {
-            Ok(snap) => {
-                if let Some(login) = snap.account.login.clone()
-                    && !login.is_empty()
-                {
-                    // Builder takes self by value; swap the updated copy in.
-                    let updated = ctx.clone().with_account(login);
-                    *ctx = updated;
-                }
-                if let Some(batch) = engine.build_account_batch(&snap) {
-                    deliver(engine, gateway, batch).await;
-                }
-            }
-            Err(e) => tracing::warn!(error = %e, "account snapshot mapping failed"),
-        },
-        Err(e) => tracing::warn!(error = %e, "account query failed"),
-    }
-
-    // Open positions + working orders.
-    match mcp
-        .call_tool_json(
-            trading_tools::OPEN_POSITIONS,
-            &json!({ "include_orders": true }),
-        )
-        .await
-    {
-        Ok(payload) => match mt5::open_positions(&payload) {
-            Ok(pos) => {
-                if let Some(batch) = engine.build_positions_batch(&pos) {
-                    deliver(engine, gateway, batch).await;
-                }
-            }
-            Err(e) => tracing::warn!(error = %e, "positions mapping failed"),
-        },
-        Err(e) => tracing::warn!(error = %e, "positions query failed"),
-    }
-
-    // History window from the checkpoint (gap recovery after downtime).
-    let to = broker_time_now();
-    let (from, _) = engine.history_query_range(&to);
-    let args = json!({
-        "datetime_from": from,
-        "datetime_to": to,
-        "limit": engine.history_page_limit(),
-    });
-    match mcp
-        .call_tool_json(trading_tools::HISTORY_ORDERS, &args)
-        .await
-    {
-        Ok(payload) => match mt5::history_orders(&payload) {
-            Ok(hist) => {
-                let batch = engine.build_history_batch(&hist);
-                deliver(engine, gateway, batch).await;
-            }
-            Err(e) => tracing::warn!(error = %e, "history mapping failed"),
-        },
-        Err(e) => tracing::warn!(error = %e, "history query failed"),
-    }
-}
-
-/// "Now" in the broker's naive ISO format (no timezone — broker-time rule).
-fn broker_time_now() -> String {
-    let fd = format_description!("[year]-[month]-[day]T[hour]:[minute]:[second]");
-    OffsetDateTime::now_utc()
-        .format(&fd)
-        .unwrap_or_else(|_| "1970-01-01T00:00:00".to_string())
-}
-
-/// queue → REST delivery → retire on accepted ack; retained on failure.
-async fn deliver(
-    engine: &mut SyncEngine,
-    gateway: &NseGatewayClient,
-    batch: connector_core::sync::SyncBatch,
-) {
-    engine.queue(batch.clone());
-    let req = SyncBatchRequest {
-        batch_id: batch.batch_id.clone(),
-        kind: batch.kind.as_str().to_string(),
-        items: batch.items.clone(),
-        count: batch.count as u32,
-        produced_at: batch.produced_at.clone(),
-    };
-    match gateway.send_batch(&req).await {
-        Ok(ack) if ack.accepted => {
-            engine.mark_acked(&batch.batch_id);
-            tracing::info!(
-                batch_id = %batch.batch_id,
-                kind = %batch.kind.as_str(),
-                count = batch.count,
-                "batch delivered and acknowledged"
-            );
-        }
-        Ok(ack) => {
-            tracing::warn!(
-                batch_id = %batch.batch_id,
-                accepted = ack.accepted,
-                "batch not accepted; retained for retry"
-            );
-        }
-        Err(e) => {
-            tracing::warn!(
-                batch_id = %batch.batch_id,
-                error = %e,
-                "batch delivery failed; retained for retry"
-            );
-        }
-    }
 }
