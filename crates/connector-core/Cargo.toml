@@ -16,7 +16,12 @@ time = { workspace = true }
 uuid = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 keyring = { workspace = true }
+
+[[bin]]
+name = "nse-connector"
+path = "src/bin/nse_connector.rs"
 
 [dev-dependencies]
 axum = { workspace = true }

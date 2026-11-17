@@ -1,0 +1,74 @@
+{
+ "evidence_id": "T000",
+ "checklist_items": [
+  46,
+  47,
+  48,
+  49,
+  50,
+  51
+ ],
+ "action": "trade_check_pending_order",
+ "input": {
+  "probe": "pending type enum discovery",
+  "results": {
+   "buy_limit": {
+    "classification": "tool_error",
+    "response": {
+     "tool_error": "Tool 'trade_check_pending_order' trading is not permitted"
+    }
+   },
+   "sell_limit": {
+    "classification": "tool_error",
+    "response": {
+     "tool_error": "Tool 'trade_check_pending_order' trading is not permitted"
+    }
+   },
+   "buy_stop": {
+    "classification": "tool_error",
+    "response": {
+     "tool_error": "Tool 'trade_check_pending_order' trading is not permitted"
+    }
+   },
+   "sell_stop": {
+    "classification": "tool_error",
+    "response": {
+     "tool_error": "Tool 'trade_check_pending_order' trading is not permitted"
+    }
+   },
+   "buy_stop_limit": {
+    "classification": "tool_error",
+    "response": {
+     "tool_error": "Tool 'trade_check_pending_order' trading is not permitted"
+    }
+   },
+   "sell_stop_limit": {
+    "classification": "tool_error",
+    "response": {
+     "tool_error": "Tool 'trade_check_pending_order' trading is not permitted"
+    }
+   },
+   "buy limit": {
+    "classification": "tool_error",
+    "response": {
+     "tool_error": "Tool 'trade_check_pending_order' trading is not permitted"
+    }
+   },
+   "BUY_LIMIT": {
+    "classification": "tool_error",
+    "response": {
+     "tool_error": "Tool 'trade_check_pending_order' trading is not permitted"
+    }
+   }
+  }
+ },
+ "latency_ms": 0,
+ "classification": "ok",
+ "raw_output": {
+  "accepted": []
+ },
+ "verdict": "record: enum shape differs",
+ "broker": "MetaQuotes-Demo",
+ "notes": "validation-only probe; no orders placed",
+ "retry_safe": true
+}

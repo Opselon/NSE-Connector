@@ -1,0 +1,20 @@
+{
+ "evidence_id": "T002",
+ "checklist_items": [
+  39,
+  41
+ ],
+ "action": "get_trading_open_positions",
+ "input": {
+  "include_orders": true
+ },
+ "latency_ms": 0,
+ "classification": "ok",
+ "raw_output": {
+  "new_tickets": []
+ },
+ "verdict": "FAIL: BUY position not found",
+ "broker": "MetaQuotes-Demo",
+ "notes": "",
+ "retry_safe": true
+}

@@ -1,0 +1,21 @@
+{
+ "evidence_id": "T011",
+ "checklist_items": [
+  46
+ ],
+ "action": "trade_send_pending_order",
+ "input": {
+  "symbol": "EURUSD",
+  "type": "buy_limit",
+  "note": "rejected by enum probe"
+ },
+ "latency_ms": 0,
+ "classification": "skipped",
+ "raw_output": {
+  "note": "buy_limit not accepted"
+ },
+ "verdict": "record: buy_limit unavailable on this broker",
+ "broker": "MetaQuotes-Demo",
+ "notes": "enum probe T000",
+ "retry_safe": false
+}

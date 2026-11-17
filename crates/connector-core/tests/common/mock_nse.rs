@@ -16,7 +16,7 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
-use futures_util::SinkExt;
+use futures_util::{SinkExt, StreamExt};
 use serde_json::{Value, json};
 use tokio::sync::{RwLock, watch};
 use tokio::task::JoinHandle;
@@ -49,6 +49,18 @@ struct NseState {
     /// Frames pushed to the client on connect.
     ws_outbox: RwLock<Vec<String>>,
     ws_inbound_count: Arc<AtomicU64>,
+    /// All inbound WS text frames, in arrival order (result assertions).
+    ws_inbound_log: Mutex<Vec<String>>,
+    /// Server replies to client heartbeats (as-built behavior); disabling
+    /// drives the client's inbound liveness watchdog.
+    ws_heartbeat_reply: RwLock<bool>,
+    /// When set, the WS upgrade is rejected with this HTTP status before
+    /// the socket exists (auth-failure scenarios).
+    ws_auth_reject: RwLock<Option<u16>>,
+    /// Live-push subscribers (one sender per active session) — the as-built
+    /// server pushes sync_request/commands over the LIVE socket, not only
+    /// at connect.
+    live_subscribers: Mutex<Vec<tokio::sync::mpsc::Sender<String>>>,
 }
 
 pub struct MockNse {
@@ -90,6 +102,10 @@ impl MockNse {
             ws_drop_after_frames: RwLock::new(None),
             ws_outbox: RwLock::new(Vec::new()),
             ws_inbound_count: Arc::new(AtomicU64::new(0)),
+            ws_inbound_log: Mutex::new(Vec::new()),
+            ws_heartbeat_reply: RwLock::new(true),
+            ws_auth_reject: RwLock::new(None),
+            live_subscribers: Mutex::new(Vec::new()),
         });
 
         let app = Router::new()
@@ -158,6 +174,12 @@ impl MockNse {
         *self.state.batch.write().await = Some(EndpointBehavior { status, body });
     }
 
+    /// Restores the default batch behavior (echo the incoming batch_id as
+    /// accepted) after an injected failure.
+    pub async fn clear_batch(&self) {
+        *self.state.batch.write().await = None;
+    }
+
     pub async fn set_heartbeat(&self, status: u16, body: Value) {
         *self.state.heartbeat.write().await = Some(EndpointBehavior { status, body });
     }
@@ -170,12 +192,42 @@ impl MockNse {
         self.state.ws_outbox.write().await.push(frame.to_string());
     }
 
+    /// Pushes a frame to every ACTIVE session over the live socket (the
+    /// as-built `push_to_device` semantics).
+    pub async fn push_live(&self, frame: &str) {
+        let mut subs = self.state.live_subscribers.lock().unwrap();
+        subs.retain(|tx| tx.try_send(frame.to_string()).is_ok());
+    }
+
     pub fn ws_sessions(&self) -> u64 {
         self.state.ws_sessions.load(Ordering::SeqCst)
     }
 
     pub fn ws_inbound_frames(&self) -> u64 {
         self.state.ws_inbound_count.load(Ordering::SeqCst)
+    }
+
+    pub async fn set_ws_heartbeat_reply(&self, reply: bool) {
+        *self.state.ws_heartbeat_reply.write().await = reply;
+    }
+
+    /// Rejects the next WS upgrades with this HTTP status (401/403) before
+    /// the socket exists — the as-built server rejects bad auth pre-upgrade.
+    pub async fn set_ws_auth_reject(&self, status: Option<u16>) {
+        *self.state.ws_auth_reject.write().await = status;
+    }
+
+    /// Inbound WS text frames in arrival order.
+    pub async fn ws_inbound_log(&self) -> Vec<String> {
+        self.state.ws_inbound_log.lock().unwrap().clone()
+    }
+
+    pub async fn clear_ws_inbound_log(&self) {
+        self.state.ws_inbound_log.lock().unwrap().clear();
+    }
+
+    pub async fn clear_ws_outbox(&self) {
+        self.state.ws_outbox.write().await.clear();
     }
 }
 
@@ -308,39 +360,81 @@ async fn ws_handler(
         body: Value::Null,
     });
 
+    // Auth-failure scenarios: reject BEFORE the upgrade completes (the
+    // as-built server validates headers pre-upgrade).
+    if let Some(status) = *state.ws_auth_reject.read().await {
+        let sc = StatusCode::from_u16(status).unwrap_or(StatusCode::UNAUTHORIZED);
+        return (
+            sc,
+            Json(json!({ "error": { "code": "key_invalid", "message": "mock auth reject" } })),
+        )
+            .into_response();
+    }
+
     let outbox: Vec<String> = state.ws_outbox.read().await.clone();
     let drop_after: Option<u64> = *state.ws_drop_after_frames.read().await;
-    let sessions = Arc::clone(&state.ws_sessions);
-    let inbound = Arc::clone(&state.ws_inbound_count);
+    let heartbeat_reply = *state.ws_heartbeat_reply.read().await;
+    let state2 = Arc::clone(&state);
 
     upgrade.on_upgrade(move |socket| async move {
-        handle_ws(socket, outbox, drop_after, sessions, inbound).await;
+        handle_ws(socket, outbox, drop_after, heartbeat_reply, state2).await;
     })
 }
 
 async fn handle_ws(
-    mut socket: WebSocket,
+    socket: WebSocket,
     outbox: Vec<String>,
     drop_after: Option<u64>,
-    sessions: Arc<AtomicU64>,
-    inbound_count: Arc<AtomicU64>,
+    heartbeat_reply: bool,
+    state: Arc<NseState>,
 ) {
-    sessions.fetch_add(1, Ordering::SeqCst);
+    state.ws_sessions.fetch_add(1, Ordering::SeqCst);
+    let (mut sink, mut stream) = socket.split();
+    // Live-push support: a single writer pump forwards both the connect
+    // outbox and live pushes through one bounded channel (preserves order).
+    let (live_tx, mut live_rx) = tokio::sync::mpsc::channel::<String>(64);
     for frame in outbox {
-        if socket.send(WsMessage::text(frame)).await.is_err() {
-            return;
-        }
+        let _ = live_tx.send(frame).await;
     }
-    while let Some(Ok(msg)) = socket.recv().await {
-        if let WsMessage::Text(_) = &msg {
-            let n = inbound_count.fetch_add(1, Ordering::SeqCst) + 1;
+    state.live_subscribers.lock().unwrap().push(live_tx.clone());
+    let pump = tokio::spawn(async move {
+        while let Some(frame) = live_rx.recv().await {
+            if sink.send(WsMessage::text(frame)).await.is_err() {
+                break;
+            }
+        }
+    });
+    while let Some(Ok(msg)) = stream.next().await {
+        if let WsMessage::Text(text) = &msg {
+            let n = state.ws_inbound_count.fetch_add(1, Ordering::SeqCst) + 1;
+            state.ws_inbound_log.lock().unwrap().push(text.to_string());
+            // As-built server behavior: heartbeats are answered with the
+            // pending-command count, keeping the client's watchdog fed.
+            if heartbeat_reply
+                && serde_json::from_str::<Value>(text)
+                    .ok()
+                    .and_then(|v| v.get("type").and_then(Value::as_str).map(str::to_string))
+                    .as_deref()
+                    == Some("heartbeat")
+            {
+                let reply = json!({
+                    "type": "heartbeat",
+                    "server_time": "2026-11-17T00:00:00Z",
+                    "pending_commands": 0,
+                });
+                if live_tx.send(reply.to_string()).await.is_err() {
+                    pump.abort();
+                    return;
+                }
+            }
             if let Some(limit) = drop_after
                 && n >= limit
             {
                 // Abrupt drop (disconnect scenario). Close without ack.
-                let _ = socket.close().await;
+                pump.abort();
                 return;
             }
         }
     }
+    pump.abort();
 }

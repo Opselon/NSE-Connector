@@ -1,0 +1,21 @@
+{
+ "evidence_id": "T012",
+ "checklist_items": [
+  48
+ ],
+ "action": "trade_send_pending_order",
+ "input": {
+  "symbol": "EURUSD",
+  "type": "buy_stop",
+  "note": "rejected by enum probe"
+ },
+ "latency_ms": 0,
+ "classification": "skipped",
+ "raw_output": {
+  "note": "buy_stop not accepted"
+ },
+ "verdict": "record: buy_stop unavailable on this broker",
+ "broker": "MetaQuotes-Demo",
+ "notes": "enum probe T000",
+ "retry_safe": false
+}

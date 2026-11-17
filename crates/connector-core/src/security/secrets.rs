@@ -6,6 +6,8 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::Mutex;
 
+use thiserror::Error;
+
 /// A credential value that never reveals itself in `Debug`/`Display` output
 /// or derive-based logging.
 #[derive(Clone, Default, PartialEq, Eq)]
@@ -35,12 +37,21 @@ impl fmt::Display for Secret {
     }
 }
 
+/// Typed error for the [`SecretStore`] port — matchable variants instead of
+/// bare `String`, so callers keep a proper error chain.
+#[derive(Debug, Error)]
+pub enum SecretStoreError {
+    /// The platform credential backend failed (I/O, access denied, ...).
+    #[error("platform credential store failure: {0}")]
+    Platform(String),
+}
+
 /// Port for durable credential storage. Production uses Windows Credential
 /// Manager; tests use [`MemorySecretStore`].
 pub trait SecretStore: Send + Sync {
-    fn store(&self, name: &str, value: &Secret) -> Result<(), String>;
-    fn load(&self, name: &str) -> Result<Option<Secret>, String>;
-    fn delete(&self, name: &str) -> Result<(), String>;
+    fn store(&self, name: &str, value: &Secret) -> Result<(), SecretStoreError>;
+    fn load(&self, name: &str) -> Result<Option<Secret>, SecretStoreError>;
+    fn delete(&self, name: &str) -> Result<(), SecretStoreError>;
 }
 
 /// In-memory implementation for tests only — never persisted to disk.
@@ -56,25 +67,28 @@ impl MemorySecretStore {
 }
 
 impl SecretStore for MemorySecretStore {
-    fn store(&self, name: &str, value: &Secret) -> Result<(), String> {
+    fn store(&self, name: &str, value: &Secret) -> Result<(), SecretStoreError> {
         self.map
             .lock()
-            .map_err(|e| e.to_string())?
+            .map_err(|e| SecretStoreError::Platform(e.to_string()))?
             .insert(name.to_string(), value.clone());
         Ok(())
     }
 
-    fn load(&self, name: &str) -> Result<Option<Secret>, String> {
+    fn load(&self, name: &str) -> Result<Option<Secret>, SecretStoreError> {
         Ok(self
             .map
             .lock()
-            .map_err(|e| e.to_string())?
+            .map_err(|e| SecretStoreError::Platform(e.to_string()))?
             .get(name)
             .cloned())
     }
 
-    fn delete(&self, name: &str) -> Result<(), String> {
-        self.map.lock().map_err(|e| e.to_string())?.remove(name);
+    fn delete(&self, name: &str) -> Result<(), SecretStoreError> {
+        self.map
+            .lock()
+            .map_err(|e| SecretStoreError::Platform(e.to_string()))?
+            .remove(name);
         Ok(())
     }
 }
@@ -94,31 +108,32 @@ impl WindowsCredentialStore {
         }
     }
 
-    fn entry(&self, name: &str) -> Result<keyring::Entry, String> {
-        keyring::Entry::new(&self.service, name).map_err(|e| e.to_string())
+    fn entry(&self, name: &str) -> Result<keyring::Entry, SecretStoreError> {
+        keyring::Entry::new(&self.service, name)
+            .map_err(|e| SecretStoreError::Platform(e.to_string()))
     }
 }
 
 impl SecretStore for WindowsCredentialStore {
-    fn store(&self, name: &str, value: &Secret) -> Result<(), String> {
+    fn store(&self, name: &str, value: &Secret) -> Result<(), SecretStoreError> {
         self.entry(name)?
             .set_password(value.expose())
-            .map_err(|e| e.to_string())
+            .map_err(|e| SecretStoreError::Platform(e.to_string()))
     }
 
-    fn load(&self, name: &str) -> Result<Option<Secret>, String> {
+    fn load(&self, name: &str) -> Result<Option<Secret>, SecretStoreError> {
         match self.entry(name)?.get_password() {
             Ok(pw) => Ok(Some(Secret::new(pw))),
             Err(keyring::Error::NoEntry) => Ok(None),
-            Err(e) => Err(e.to_string()),
+            Err(e) => Err(SecretStoreError::Platform(e.to_string())),
         }
     }
 
-    fn delete(&self, name: &str) -> Result<(), String> {
+    fn delete(&self, name: &str) -> Result<(), SecretStoreError> {
         match self.entry(name)?.delete_credential() {
             Ok(()) => Ok(()),
             Err(keyring::Error::NoEntry) => Ok(()),
-            Err(e) => Err(e.to_string()),
+            Err(e) => Err(SecretStoreError::Platform(e.to_string())),
         }
     }
 }

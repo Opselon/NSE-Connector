@@ -18,9 +18,11 @@ use connector_core::nse::{
     parse_server_message,
 };
 use connector_core::security::commands::{CommandOperation, CommandRejection, CommandValidator};
-use connector_core::security::secrets::{
-    MemorySecretStore, Secret, SecretStore, WindowsCredentialStore,
-};
+use connector_core::security::secrets::{MemorySecretStore, Secret, SecretStore};
+
+// Windows-only store (the roundtrip test below is cfg-gated too).
+#[cfg(windows)]
+use connector_core::security::WindowsCredentialStore;
 use connector_core::security::{mask_login, redact_text};
 use serde_json::json;
 use std::time::Instant;
@@ -76,7 +78,9 @@ async fn mt5_credential_never_reaches_nse_core() {
     .expect("map");
     let batch = {
         let mut engine = connector_core::sync::SyncEngine::new(Default::default());
-        engine.build_account_batch(&snap)
+        engine
+            .build_account_batch(&snap)
+            .expect("serialize snapshot")
     };
     let nse = nse_client(&mock_nse, NSE_KEY);
     let _ = nse
@@ -232,6 +236,10 @@ fn login_is_masked_in_diagnostics() {
 // Secret storage (REAL Windows Credential Manager integration)
 // ---------------------------------------------------------------------------
 
+// Windows Credential Manager is Windows-only; CI runs the suite on Linux
+// where this store has no backend (the port is exercised by the memory
+// implementation everywhere else).
+#[cfg(windows)]
 #[test]
 fn windows_credential_store_roundtrip_without_plaintext_files() {
     let service = "NSE-Connector-Tests";

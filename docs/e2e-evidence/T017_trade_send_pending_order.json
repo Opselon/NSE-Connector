@@ -1,0 +1,18 @@
+{
+ "evidence_id": "T017",
+ "checklist_items": [
+  59,
+  60
+ ],
+ "action": "trade_send_pending_order",
+ "input": {},
+ "latency_ms": 0,
+ "classification": "skipped",
+ "raw_output": {
+  "note": "sell_limit not accepted"
+ },
+ "verdict": "record: trigger flow skipped",
+ "broker": "MetaQuotes-Demo",
+ "notes": "",
+ "retry_safe": false
+}

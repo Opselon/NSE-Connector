@@ -278,8 +278,12 @@ async fn live_full_connector_boot_sequence() {
     .expect("map");
 
     let mut engine = connector_core::sync::SyncEngine::new(Default::default());
-    let b1 = engine.build_account_batch(&snap);
-    let b2 = engine.build_positions_batch(&pos);
+    let b1 = engine
+        .build_account_batch(&snap)
+        .expect("serialize snapshot");
+    let b2 = engine
+        .build_positions_batch(&pos)
+        .expect("serialize positions");
     let b3 = engine.build_history_batch(&hist);
     println!(
         "LIVE boot sequence OK: batches built (account={}, positions={}, history={}), checkpoint={:?}",

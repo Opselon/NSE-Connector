@@ -247,17 +247,27 @@ impl ActionDispatcher {
     }
 
     pub fn manifest(&self) -> Arc<ActionManifest> {
-        self.manifest.read().expect("lock").clone()
+        self.manifest
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
     }
 
     /// Replaces the manifest after a re-discovery (server capabilities
     /// changed).
     pub fn replace_manifest(&self, manifest: ActionManifest) {
-        *self.manifest.write().expect("lock") = Arc::new(manifest);
+        *self.manifest.write().unwrap_or_else(|e| e.into_inner()) = Arc::new(manifest);
     }
 
     pub fn kill_switch(&self) -> &KillSwitch {
         &self.kill
+    }
+
+    /// Replay check shared with the bridge command path: returns true when
+    /// the idempotency key is fresh (and records it for next time).
+    pub fn check_replay(&self, idempotency_key: &str) -> bool {
+        let mut replay = self.replay.lock().unwrap_or_else(|e| e.into_inner());
+        replay.insert(idempotency_key)
     }
 
     /// Full dispatch flow. Returns either an outcome or a rejection — a
@@ -301,7 +311,7 @@ impl ActionDispatcher {
         let descriptor = self
             .manifest
             .read()
-            .expect("lock")
+            .unwrap_or_else(|e| e.into_inner())
             .get(&req.action_name)
             .cloned();
         let category = descriptor
@@ -393,7 +403,7 @@ impl ActionDispatcher {
 
         // 9. Replay protection — only successful validations consume an id.
         {
-            let mut replay = self.replay.lock().expect("lock");
+            let mut replay = self.replay.lock().unwrap_or_else(|e| e.into_inner());
             if !replay.insert(&req.idempotency_key) {
                 tracing::warn!(action = %req.action_name, "dispatch rejected: replay");
                 return Err(DispatchRejection::Replayed);

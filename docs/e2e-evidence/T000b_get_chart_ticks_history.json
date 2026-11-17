@@ -1,0 +1,26 @@
+{
+ "evidence_id": "T000b",
+ "checklist_items": [
+  14,
+  15,
+  16
+ ],
+ "action": "get_chart_ticks_history",
+ "input": {
+  "symbol": "EURUSD",
+  "note": "live tick fetch for price levels"
+ },
+ "latency_ms": 0,
+ "classification": "ok",
+ "raw_output": {
+  "bid": 1.09774,
+  "ask": 1.09774,
+  "tick_count": 50,
+  "spec_found": true,
+  "digits": 5
+ },
+ "verdict": "pass",
+ "broker": "MetaQuotes-Demo",
+ "notes": "ticks feed every price level in this batch",
+ "retry_safe": true
+}
