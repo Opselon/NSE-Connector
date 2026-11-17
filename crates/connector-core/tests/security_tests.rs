@@ -18,9 +18,7 @@ use connector_core::nse::{
     parse_server_message,
 };
 use connector_core::security::commands::{CommandOperation, CommandRejection, CommandValidator};
-use connector_core::security::secrets::{
-    MemorySecretStore, Secret, SecretStore,
-};
+use connector_core::security::secrets::{MemorySecretStore, Secret, SecretStore};
 
 // Windows-only store (the roundtrip test below is cfg-gated too).
 #[cfg(windows)]
