@@ -4,16 +4,28 @@ on:
   push:
     branches: [main]
   pull_request:
+    # Docs-only PRs get no signal from a Rust gate — skip the run.
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+
+# Superseded runs on the same ref are cancelled: a pushed follow-up commit
+# invalidates the previous run's result, so its runner minutes are waste.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   quality:
     name: fmt + clippy + tests
     runs-on: ubuntu-latest
+    # Bounded so a hung job cannot sit on the 360-minute default.
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
         with:
           components: rustfmt, clippy
 
